@@ -91,36 +91,39 @@ def get_int(prompt: str, min_value: int, max_value: int) -> int:
 
 def main():
     '''Driver Code'''
-    choice = get_int(
-        '''What kind of mathmatical expressions do you want to parse?
+    while 1:
+        choice = get_int(
+            '''What kind of mathmatical expressions do you want to parse?
 1) prefix   e.g. + 1 2
 2) postfix  e.g. 1 2 +
+3) quit
 ''',
-        1,
-        2
-    )
-    match choice:
-        case 1:
-            parser_name = 'prefix'
-            parser = parse_prefix
-        case 2:
-            parser_name = 'postfix'
-            parser = parse_postfix
-    while 1:
-        try:
-            expr = input(f'Enter {parser_name} expression> ')
-        except EOFError:
-            break
-        if expr == 'quit' or expr == 'q':
-            break
-        invalid = False
-        operators = Stack()
-        result = parser(token_scanner(expr))
-        if result is None:
-            print(f'\033[41mError:\033[0m Invalid expression {expr!r}')
-        else:
-            print(f'{expr} = {result}')
-
+            1,
+            3
+        )
+        match choice:
+            case 1:
+                parser_name = 'prefix'
+                parser = parse_prefix
+            case 2:
+                parser_name = 'postfix'
+                parser = parse_postfix
+            case 3:
+                return
+        while 1:
+            try:
+                expr = input(f'Enter {parser_name} expression> ')
+            except EOFError:
+                break
+            if expr == 'quit' or expr == 'q':
+                break
+            invalid = False
+            operators = Stack()
+            result = parser(token_scanner(expr))
+            if result is None:
+                print(f'\033[41mError:\033[0m Invalid expression {expr!r}')
+            else:
+                print(f'{expr} = {result}')
 
 if __name__ == '__main__':
     main()
