@@ -15,6 +15,7 @@ OPS = {
     '*': lambda a, b: a * b,
     '/': lambda a, b: a / b,
 }
+PARENS = '()'
 
 def token_scanner(expr: str) -> Iterator[str | int | float]:
     state = State.NONE
@@ -23,7 +24,7 @@ def token_scanner(expr: str) -> Iterator[str | int | float]:
     num_parse_fn = int
     for index, ch in enumerate(expr):
         if state == State.NONE:
-            if ch in OPS:
+            if ch in OPS or ch in PARENS:
                 yield ch
             elif ch.isnumeric():
                 state = State.NUM
@@ -35,7 +36,7 @@ def token_scanner(expr: str) -> Iterator[str | int | float]:
             elif not ch.isnumeric() and ch != '.':
                 state = State.NONE
                 yield num_parse_fn(expr[start_index:index])
-                if ch in OPS:
+                if ch in OPS or ch in PARENS:
                     yield ch
 
 def parse_prefix(tokens: Iterator[str | int | float]) -> None | int | float:
@@ -73,6 +74,19 @@ def parse_postfix(tokens: Iterator[str | int | float]) -> None | int | float:
     else:
         return None
 
+def parse_paren_infix(tokens: Iterator[str | int | float]) -> None | int | float:
+    result = next(tokens, None)
+    if isinstance(result, int | float):
+        return result
+    if result == '(':
+        a = parse_paren_infix(tokens)
+        op = next(tokens, None)
+        b = parse_paren_infix(tokens)
+        if next(tokens, None) != ')' or None in [a, op, b]:
+            return None
+        return OPS[op](a, b)
+    return None
+
 def get_int(prompt: str, min_value: int, max_value: int) -> int:
     while 1:
         num = input(f'{prompt}\nEnter an integer between {min_value} and {max_value}> ')
@@ -94,12 +108,13 @@ def main():
     while 1:
         choice = get_int(
             '''What kind of mathmatical expressions do you want to parse?
-1) prefix   e.g. + 1 2
-2) postfix  e.g. 1 2 +
-3) quit
+1) prefix                e.g. + 1 * 2 3
+2) postfix               e.g. 1 2 3 * +
+3) parenthetical infix   e.g. (1 + (2 * 3))
+4) quit
 ''',
             1,
-            3
+            4
         )
         match choice:
             case 1:
@@ -109,6 +124,9 @@ def main():
                 parser_name = 'postfix'
                 parser = parse_postfix
             case 3:
+                parser_name = 'parenthetical infix'
+                parser = parse_paren_infix
+            case 4:
                 return
         while 1:
             try:
