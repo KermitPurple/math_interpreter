@@ -40,21 +40,18 @@ def token_scanner(expr: str) -> Iterator[str | int | float]:
                     yield ch
 
 def parse_prefix(tokens: Iterator[str | int | float]) -> None | int | float:
-    def helper(op: str | None) -> None | int | float:
-        if op is None:
-            return None
-        a = next(tokens, None)
-        if a in OPS:
-            a = helper(a)
-        if a is None:
-            return None
-        b = next(tokens, None)
-        if b in OPS:
-            b = helper(b)
-        if b is None:
-            return None
-        return OPS[op](a, b)
-    result = helper(next(tokens, None))
+    def helper() -> None | int | float:
+        result = next(tokens, None)
+        if isinstance(result, int | float):
+            return result
+        if result in OPS:
+            a = helper()
+            b = helper()
+            if None in [a, b]:
+                return None
+            return OPS[result](a, b)
+        return None
+    result = helper()
     if next(tokens, None) is not None:
         return None
     return result
@@ -75,17 +72,22 @@ def parse_postfix(tokens: Iterator[str | int | float]) -> None | int | float:
         return None
 
 def parse_paren_infix(tokens: Iterator[str | int | float]) -> None | int | float:
-    result = next(tokens, None)
-    if isinstance(result, int | float):
-        return result
-    if result == '(':
-        a = parse_paren_infix(tokens)
-        op = next(tokens, None)
-        b = parse_paren_infix(tokens)
-        if next(tokens, None) != ')' or None in [a, op, b]:
-            return None
-        return OPS[op](a, b)
-    return None
+    def helper() -> None | int | float:
+        result = next(tokens, None)
+        if isinstance(result, int | float):
+            return result
+        if result == '(':
+            a = helper()
+            op = next(tokens, None)
+            b = helper()
+            if next(tokens, None) != ')' or None in [a, op, b]:
+                return None
+            return OPS[op](a, b)
+        return None
+    result = helper()
+    if next(tokens, None) is not None:
+        return None
+    return result
 
 def get_int(prompt: str, min_value: int, max_value: int) -> int:
     while 1:
