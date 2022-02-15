@@ -6,90 +6,132 @@ from enum import Enum
 import sys
 
 class State(Enum):
+    '''
+    States for token_scanner
+    NONE: not currently scanning anything
+    NUM: currently scanning a number
+    '''
     NONE = 0
-    NUM = 2
+    NUM = 1
 
-OPS = {
+OPS = { # operations assigned to operators
     '+': lambda a, b: a + b,
     '-': lambda a, b: a - b,
     '*': lambda a, b: a * b,
     '/': lambda a, b: a / b,
 }
-PARENS = '()'
+PARENS = ['(', ')']
 
 def token_scanner(expr: str) -> Iterator[str | int | float]:
+    '''
+    takes a string of operators operands and parentheses and splits them, making sure to group correctly
+    :expr: str; the expression that will be turned into indivdual tokens
+    :returns: iterator of str int and floats
+    '''
     state = State.NONE
-    expr = expr.strip() + ' '
-    start_index = 0
-    num_parse_fn = int
+    expr = expr.strip() + ' ' # add space at end of expr to always send last meaningful character
+    start_index = 0 # start index of current group
+    num_parse_fn = int # function to parse numbers
     for index, ch in enumerate(expr):
-        if state == State.NONE:
-            if ch in OPS or ch in PARENS:
+        if state == State.NONE: # no current parse target
+            if ch in OPS or ch in PARENS: # yield character if valuable
                 yield ch
-            elif ch.isnumeric():
+            elif ch.isnumeric(): # is a number
+                # set to start parsing a number
                 state = State.NUM
                 start_index = index
                 num_parse_fn = int
-        elif state == State.NUM:
-            if ch == '.':
+        elif state == State.NUM: # currently parsing number
+            if ch == '.': # this means it's a floating point number
                 num_parse_fn = float
-            elif not ch.isnumeric() and ch != '.':
+            elif not ch.isnumeric() and ch != '.': # if the character isn't part of the number
+                # number is over set to parsing nothing
                 state = State.NONE
-                yield num_parse_fn(expr[start_index:index])
-                if ch in OPS or ch in PARENS:
+                yield num_parse_fn(expr[start_index:index]) # yield number
+                if ch in OPS or ch in PARENS: # yield character if valuable
                     yield ch
 
 def parse_prefix(tokens: Iterator[str | int | float]) -> None | int | float:
+    '''
+    parses a mathmatical expression in prefix format
+    e.g. + 1 * 2 3 -> 7
+    :tokens: iterator over tokens containing operators, parentheses, and numbers
+    :returns: the result of the evaluated tokens; returns None if the expression is invalid
+    '''
     def helper() -> None | int | float:
-        result = next(tokens, None)
-        if isinstance(result, int | float):
-            return result
-        if result in OPS:
-            a = helper()
-            b = helper()
-            if None in [a, b]:
-                return None
-            return OPS[result](a, b)
-        return None
-    result = helper()
-    if next(tokens, None) is not None:
-        return None
-    return result
+        '''Helper function for parsing tokens'''
+        result = next(tokens, None) # get next token
+        if isinstance(result, int | float): # if token is a number
+            return result # return it
+        if result in OPS: # if token is an operator
+            a = helper() # get first operand
+            b = helper() # get second operand
+            if None in [a, b]: # if either of them are None
+                return None # fail
+            return OPS[result](a, b) # perform the operation
+        return None # fail
+    result = helper() # evaluate expression
+    if next(tokens, None) is not None: # if the iterator isn't empty
+        return None # fail
+    return result # return evaluated expression
 
 def parse_postfix(tokens: Iterator[str | int | float]) -> None | int | float:
-    operands = Stack()
-    for token in tokens:
-        if token in OPS:
-            if len(operands) < 2:
-                return None
-            b, a = (operands.pop() for _ in range(2))
-            operands.push(OPS[token](a, b))
+    '''
+    parses a mathmatical expression in postfix notation
+    e.g. 1 2 3 * + -> 7
+    :tokens: iterator over tokens containing operators, parentheses, and numbers
+    :returns: the result of the evaluated tokens; returns None if the expression is invalid
+    '''
+    operands = Stack() # store stack for operands
+    for token in tokens: # cycle over tokens
+        if isinstance(token, int | float): # if token is number
+            operands.push(token) # add it to operands
+        elif token in OPS: # if the token is an operator
+            if len(operands) < 2: # if there aren't enough operands
+                return None # fail
+            b, a = (operands.pop() for _ in range(2)) # get operands
+            operands.push(OPS[token](a, b)) # perform operation
         else:
-            operands.push(token)
-    if len(operands) == 1:
-        return operands.pop()
+            return None # fail
+    if len(operands) == 1: # if only one remaining
+        return operands.pop() # return result
     else:
-        return None
+        return None # fail
 
 def parse_paren_infix(tokens: Iterator[str | int | float]) -> None | int | float:
+    '''
+    parses a mathmatical expression in infix notation using parenthesis
+    e.g. (1 + (2 * 3)) -> 7
+    :tokens: iterator over tokens containing operators, parentheses, and numbers
+    :returns: the result of the evaluated tokens; returns None if the expression is invalid
+    '''
     def helper() -> None | int | float:
-        result = next(tokens, None)
-        if isinstance(result, int | float):
-            return result
-        if result == '(':
-            a = helper()
-            op = next(tokens, None)
-            b = helper()
-            if next(tokens, None) != ')' or None in [a, op, b]:
-                return None
-            return OPS[op](a, b)
-        return None
-    result = helper()
-    if next(tokens, None) is not None:
-        return None
-    return result
+        '''Helper function for parsing tokens'''
+        result = next(tokens, None) # get next token
+        if isinstance(result, int | float): # if it's an number
+            return result # return it
+        if result == '(': # if it's an opening paren
+            a = helper() # get first operand
+            op = next(tokens, None) # get operator
+            b = helper() # get second operand
+            if next(tokens, None) != ')' or None in [a, op, b]: # if not missing anything
+                return None # fail
+            return OPS[op](a, b) # perform operation
+        return None # fail
+    result = helper() # evaluate expression
+    if next(tokens, None) is not None: # if the iterator isn't empty
+        return None # fail
+    return result # return evaluated expression
 
 def get_int(prompt: str, min_value: int, max_value: int) -> int:
+    '''
+    prompt user for input for a number between {min_value} and {max_value}
+    will loop until user enters an ok response
+    :prompt: prompt to show every loop
+    :min_value: smallest accepted value
+    :max_value: greatest accepted value
+    :returns: a value >= min_value and <= max_value chosen by the user and parsed using int
+    '''
     while 1:
         num = input(f'{prompt}\nEnter an integer between {min_value} and {max_value}> ')
         try:
