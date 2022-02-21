@@ -20,6 +20,14 @@ OPS = { # operations assigned to operators
     '*': lambda a, b: a * b,
     '/': lambda a, b: a / b,
 }
+ADD_OPS = {
+    '+': OPS['+'],
+    '-': OPS['-'],
+}
+MUL_OPS = {
+    '*': OPS['*'],
+    '/': OPS['/'],
+}
 PARENS = ['(', ')']
 
 def token_scanner(expr: str) -> Iterator[str | int | float]:
@@ -123,6 +131,39 @@ def parse_paren_infix(tokens: Iterator[str | int | float]) -> None | int | float
         return None # fail
     return result # return evaluated expression
 
+def parse_infix(tokens: Iterator[str | int | float]) -> None | int | float:
+    '''
+    parses a mathmatical expression in infix notation using optional parenthesis
+    e.g. 1 + 2 * 3 -> 7
+    e.g. (1 + 2) * 3 -> 9
+    :tokens: iterator over tokens containing operators, parentheses, and numbers
+    :returns: the result of the evaluated tokens; returns None if the expression is invalid
+    '''
+    #TODO get parens to work
+    def helper(a: None | float | int = None) -> None | int | float:
+        if a is None:
+            a = next(tokens, None)
+        if a is None:
+            return None
+        op = next(tokens, None)
+        if op is None:
+            return a
+        if op in ADD_OPS:
+            b = helper()
+        if op in MUL_OPS:
+            b = next(tokens, None)
+        if b is None:
+            return None
+        result = OPS[op](a, b)
+        if op in ADD_OPS:
+            return result
+        elif op in MUL_OPS:
+            return helper(result)
+    result = helper() # evaluate expression
+    if next(tokens, None) is not None: # if the iterator isn't empty
+        return None # fail
+    return result # return evaluated expression
+
 def get_int(prompt: str, min_value: int, max_value: int) -> int:
     '''
     prompt user for input for a number between {min_value} and {max_value}
@@ -155,10 +196,11 @@ def main():
 1) prefix                e.g. + 1 * 2 3
 2) postfix               e.g. 1 2 3 * +
 3) parenthetical infix   e.g. (1 + (2 * 3))
-4) quit
+4) infix                 e.g. 1 + 2 * 3
+5) quit
 ''',
             1,
-            4
+            5
         )
         match choice:
             case 1:
@@ -171,6 +213,9 @@ def main():
                 parser_name = 'parenthetical infix'
                 parser = parse_paren_infix
             case 4:
+                parser_name = 'infix'
+                parser = parse_infix
+            case 5:
                 return
         while 1:
             try:
