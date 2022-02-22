@@ -139,20 +139,21 @@ def parse_infix(tokens: Iterator[str | int | float]) -> None | int | float:
     :tokens: iterator over tokens containing operators, parentheses, and numbers
     :returns: the result of the evaluated tokens; returns None if the expression is invalid
     '''
-    #TODO get parens to work
     def helper(a: None | float | int = None) -> None | int | float:
         if a is None:
             a = next(tokens, None)
         if a is None:
             return None
+        elif a == '(':
+            a = helper()
         op = next(tokens, None)
-        if op is None:
+        if op is None or op == ')':
             return a
         if op in ADD_OPS:
             b = helper()
         if op in MUL_OPS:
             b = next(tokens, None)
-        if b is None:
+        if not isinstance(b, int | float):
             return None
         result = OPS[op](a, b)
         if op in ADD_OPS:
