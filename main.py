@@ -139,21 +139,33 @@ def parse_infix(tokens: Iterator[str | int | float]) -> None | int | float:
     :tokens: iterator over tokens containing operators, parentheses, and numbers
     :returns: the result of the evaluated tokens; returns None if the expression is invalid
     '''
+    def get_single() -> None | int | float:
+        a = next(tokens, None)
+        if isinstance(a, int | float):
+            return a
+        elif a == '-':
+            a = get_single()
+            if not isinstance(a, int | float):
+                return None
+            return -a
+        elif a == '(':
+            return helper()
+        return None
     def helper(a: None | float | int = None) -> None | int | float:
         if a is None: # if no a is given
-            a = next(tokens, None) # get a from tokens iterator
+            a = get_single()
         if a is None: # if there is nothing in token iterator
             return None # fail
-        elif a == '(': # if token is open paren
-            a = helper() # set a to inside of paren
         op = next(tokens, None) # get operator
         if op is None or op == ')': # if no operator or operator is closing paren
             return a # return the evaluated a
         if op in ADD_OPS: # if operation is adding or subtracting
             b = helper() # calculate the rest first
-        if op in MUL_OPS: # if operation is multiplying or dividing
-            b = next(tokens, None) # get just the next one
-        if not isinstance(b, int | float): # if b isn't a number
+        elif op in MUL_OPS: # if operation is multiplying or dividing
+            b = get_single() # get just the next one
+        else: # not an add op or mul op
+            return None # fail
+        if b is None: # could not get b 
             return None # fail
         result = OPS[op](a, b) # calculate the operation on a and b
         if op in ADD_OPS: # if add/sub
