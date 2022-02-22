@@ -140,26 +140,26 @@ def parse_infix(tokens: Iterator[str | int | float]) -> None | int | float:
     :returns: the result of the evaluated tokens; returns None if the expression is invalid
     '''
     def helper(a: None | float | int = None) -> None | int | float:
-        if a is None:
-            a = next(tokens, None)
-        if a is None:
-            return None
-        elif a == '(':
-            a = helper()
-        op = next(tokens, None)
-        if op is None or op == ')':
-            return a
-        if op in ADD_OPS:
-            b = helper()
-        if op in MUL_OPS:
-            b = next(tokens, None)
-        if not isinstance(b, int | float):
-            return None
-        result = OPS[op](a, b)
-        if op in ADD_OPS:
-            return result
-        elif op in MUL_OPS:
-            return helper(result)
+        if a is None: # if no a is given
+            a = next(tokens, None) # get a from tokens iterator
+        if a is None: # if there is nothing in token iterator
+            return None # fail
+        elif a == '(': # if token is open paren
+            a = helper() # set a to inside of paren
+        op = next(tokens, None) # get operator
+        if op is None or op == ')': # if no operator or operator is closing paren
+            return a # return the evaluated a
+        if op in ADD_OPS: # if operation is adding or subtracting
+            b = helper() # calculate the rest first
+        if op in MUL_OPS: # if operation is multiplying or dividing
+            b = next(tokens, None) # get just the next one
+        if not isinstance(b, int | float): # if b isn't a number
+            return None # fail
+        result = OPS[op](a, b) # calculate the operation on a and b
+        if op in ADD_OPS: # if add/sub
+            return result # return the result
+        elif op in MUL_OPS: # if mul/div
+            return helper(result) # calculate the rest with the result as the given a
     result = helper() # evaluate expression
     if next(tokens, None) is not None: # if the iterator isn't empty
         return None # fail
