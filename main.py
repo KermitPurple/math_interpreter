@@ -1,63 +1,12 @@
 #!/usr/bin/env python3
 
+from recursive_decent_infix import parse_infix
 from typing import Iterator
+from token import token_scanner
 from stack import Stack
-from enum import Enum
+from op_info import *
 import sys
 
-class State(Enum):
-    '''
-    States for token_scanner
-    NONE: not currently scanning anything
-    NUM: currently scanning a number
-    '''
-    NONE = 0
-    NUM = 1
-
-OPS = { # operations assigned to operators
-    '+': lambda a, b: a + b,
-    '-': lambda a, b: a - b,
-    '*': lambda a, b: a * b,
-    '/': lambda a, b: a / b,
-}
-ADD_OPS = {
-    '+': OPS['+'],
-    '-': OPS['-'],
-}
-MUL_OPS = {
-    '*': OPS['*'],
-    '/': OPS['/'],
-}
-PARENS = ['(', ')']
-
-def token_scanner(expr: str) -> Iterator[str | int | float]:
-    '''
-    takes a string of operators operands and parentheses and splits them, making sure to group correctly
-    :expr: str; the expression that will be turned into indivdual tokens
-    :returns: iterator of str int and floats
-    '''
-    state = State.NONE
-    expr = expr.strip() + ' ' # add space at end of expr to always send last meaningful character
-    start_index = 0 # start index of current group
-    num_parse_fn = int # function to parse numbers
-    for index, ch in enumerate(expr):
-        if state == State.NONE: # no current parse target
-            if ch in OPS or ch in PARENS: # yield character if valuable
-                yield ch
-            elif ch.isnumeric(): # is a number
-                # set to start parsing a number
-                state = State.NUM
-                start_index = index
-                num_parse_fn = int
-        elif state == State.NUM: # currently parsing number
-            if ch == '.': # this means it's a floating point number
-                num_parse_fn = float
-            elif not ch.isnumeric() and ch != '.': # if the character isn't part of the number
-                # number is over set to parsing nothing
-                state = State.NONE
-                yield num_parse_fn(expr[start_index:index]) # yield number
-                if ch in OPS or ch in PARENS: # yield character if valuable
-                    yield ch
 
 def parse_prefix(tokens: Iterator[str | int | float]) -> None | int | float:
     '''
@@ -128,60 +77,6 @@ def parse_paren_infix(tokens: Iterator[str | int | float]) -> None | int | float
         return None # fail
     result = helper() # evaluate expression
     if next(tokens, None) is not None: # if the iterator isn't empty
-        return None # fail
-    return result # return evaluated expression
-
-def parse_infix(tokens: Iterator[str | int | float]) -> None | int | float:
-    '''
-    parses a mathmatical expression in infix notation using optional parenthesis
-    e.g. 1 + 2 * 3 -> 7
-    e.g. (1 + 2) * 3 -> 9
-    :tokens: iterator over tokens containing operators, parentheses, and numbers
-    :returns: the result of the evaluated tokens; returns None if the expression is invalid
-    '''
-    paren_count = 0
-    def get_single() -> None | int | float:
-        nonlocal paren_count
-        a = next(tokens, None)
-        if isinstance(a, int | float):
-            return a
-        elif a == '-':
-            a = get_single()
-            if not isinstance(a, int | float):
-                return None
-            return -a
-        elif a == '(':
-            paren_count += 1
-            return helper()
-        return None
-    def helper(a: None | float | int = None) -> None | int | float:
-        nonlocal paren_count
-        if a is None: # if no a is given
-            a = get_single()
-        if a is None: # if there is nothing in token iterator
-            return None # fail
-        op = next(tokens, None) # get operator
-        if op == ')':
-            paren_count -= 1
-            if paren_count < 0:
-                return None
-        if op is None or op == ')': # if no operator or operator is closing paren
-            return a # return the evaluated a
-        if op in ADD_OPS: # if operation is adding or subtracting
-            b = helper() # calculate the rest first
-        elif op in MUL_OPS: # if operation is multiplying or dividing
-            b = get_single() # get just the next one
-        else: # not an add op or mul op
-            return None # fail
-        if b is None: # could not get b 
-            return None # fail
-        result = OPS[op](a, b) # calculate the operation on a and b
-        if op in ADD_OPS: # if add/sub
-            return result # return the result
-        elif op in MUL_OPS: # if mul/div
-            return helper(result) # calculate the rest with the result as the given a
-    result = helper() # evaluate expression
-    if next(tokens, None) is not None or paren_count != 0: # if the iterator isn't empty
         return None # fail
     return result # return evaluated expression
 
